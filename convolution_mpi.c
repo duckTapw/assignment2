@@ -481,13 +481,25 @@ int main(int argc, char **argv)
     //     //MPI_Gather(retval, width*(height/size), MPI_FLOAT, output, width*(height/size), MPI_FLOAT, 0, MPI_COMM_WORLD);
     // }
     
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) /1e9;
+    if (rank == 0)
+    {
+        printf("::::::::::::::::::::::::::\n");
+        printf(":::Convolution Finished:::\n");
+        printf("Time Elapsed: %f seconds\n", elapsed);
+    }
+
     //Write to a file
     printf("going to output to file\n");
     MPI_File fp;
-    MPI_File_open(MPI_COMM_WORLD, outputfile, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fp);
     printf("file opened\n");
     if (outputfile != NULL)
     {
+        MPI_File_open(MPI_COMM_WORLD, outputfile, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fp);
         printf("process %i printing\n", rank);
         MPI_File_seek(fp, (rank * width * (height/size)) * sizeof(float), MPI_SEEK_SET);
         printf("process %i has seeked\n", rank);
@@ -501,14 +513,7 @@ int main(int argc, char **argv)
     MPI_File_close(&fp);
     MPI_Finalize();
     
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) /1e9;
-    if (rank == 0)
-    {
-        printf("::::::::::::::::::::::::::\n");
-        printf(":::Convolution Finished:::\n");
-        printf("Time Elapsed: %f seconds\n", elapsed);
-    }
+
 
     free(fmatrix);
     free(kmatrix);
