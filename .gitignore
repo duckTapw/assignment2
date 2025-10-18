@@ -1,0 +1,9 @@
+mpich-4.3.2/
+results.txt
+mpich-4.3.2.tar.gz
+convolution
+convolution_mpi
+convolution_omp
+fmap.txt
+kmap.txt
+convolution_copy.c
