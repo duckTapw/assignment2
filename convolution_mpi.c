@@ -310,7 +310,7 @@ int main(int argc, char **argv)
 
         //add padding to feature map.
         storeMatrix("fmap.txt", height, width, &fmatrix);
-        storeMatrix("kmap.txt", height, width, &fmatrix);
+        storeMatrix("kmap.txt", kheight, kwidth, &kmatrix);
     }
     // int pH = (kheight - 1)/2;
     // int pW = (kwidth - 1)/2;
@@ -423,28 +423,34 @@ int main(int argc, char **argv)
     
     featuremap = "fmap.txt";
     kernal = "kmap.txt";
+    free(fmatrix);
+    free(kmatrix);
     getmatrix(&featuremap, &width, &height, &fmatrix);
     getmatrix(&kernal, &kwidth, &kheight, &kmatrix);
     printf("file read!\n");
     //float output[height * width];
-    printf("output set\n");
+    
     //calculate padding for same size
     int pH = (kheight - 1)/2;
     int pW = (kwidth - 1)/2;
     //calculate output size
-    int oH = (height - kheight + pH + sheight)/sheight;
-    int oW = (width - kwidth + pW + swidth)/swidth;
+    int oH = (height - kheight + 2*pH + sheight)/sheight;
+    int oW = (width - kwidth + 2*pW + swidth)/swidth;
+    printf("padding - H: %i, W: %i\n", pH, pW);
+    printf("kernal - H: %i, W: %i\n", kheight, kwidth);
+    printf("featuremap - H: %i, W: %i\n", height, width);
+    printf("overrall height: %i, overrall width: %i\n", oH, oW);
     //set output array size
-
-    float retval[height/size * oW + 10];
-
+    float retval[oH/size * oW];
+    printf("retval set: %i\n", height/size * oW);
+    printf("With: %i / %i * %i\n", height, size, oW );
     float sum = 0;
     //Need to center on the middle of the rows given
     printf("starting loops\n");
-    for (int j = kheight/2 + rank*height/size; j < height - (size - 1 - rank)*(height/size); j = j + swidth)
+    for (int j = 0 + rank*(height/size); j < height - (size - 1 - rank)*(height/size); j = j + swidth)
     {
-        printf("j: %i\n", j);
-        for (int i = kwidth/2; i < width ; i = i + swidth)  //start from the middle of the row if
+        //printf("j: %i {", j);
+        for (int i = 0; i < width; i = i + swidth)  //start from the middle of the row if
         {                                               //if its even then it's a top corner or middle corner
             //printf("i: %i\n", i);
             for (int jj = 0; jj < kheight; jj++) 
@@ -453,12 +459,12 @@ int main(int argc, char **argv)
                 {
                     int hoffset = (((int)floor(kheight/2)) - jj);
                     int woffset = (((int)floor(kwidth/2)) - ii);
-                    //printf("height offset: %i\n", i - woffset);
-                    //printf("width offset: %i\n", j - hoffset);
+                    // printf("height offset: %i\n", i - woffset);
+                    // printf("width offset: %i\n", j - hoffset);
                     if ((i - woffset) >= 0 && (j - hoffset) >= 0 && (i - woffset) < width && (j - hoffset) < height)
                     {
                         sum += kmatrix[kwidth * jj + ii] * fmatrix[width * (j - hoffset) + i - woffset];
-                        //printf("adding %f\n", sum);
+                        // printf("adding %f\n", sum);
                     }
                     else
                     {
@@ -468,11 +474,12 @@ int main(int argc, char **argv)
                 }
             }
             
-            retval[width * j + i] = sum;
-        
+            retval[width * (j - rank*(height/size)) + i] = sum;
+            //printf("%i", i);
             //printf("setting [%i][%i] as %f\n", j, i, sum);   
             sum = 0; 
         }
+        //printf("}\n");
     }
     
     // if(rank != 0)
@@ -481,7 +488,7 @@ int main(int argc, char **argv)
     //     //MPI_Gather(retval, width*(height/size), MPI_FLOAT, output, width*(height/size), MPI_FLOAT, 0, MPI_COMM_WORLD);
     // }
     
-
+    printf("process %i has finished loops, waiting for other processes\n", rank);
     MPI_Barrier(MPI_COMM_WORLD);
 
     clock_gettime(CLOCK_MONOTONIC, &end);
@@ -491,6 +498,7 @@ int main(int argc, char **argv)
         printf("::::::::::::::::::::::::::\n");
         printf(":::Convolution Finished:::\n");
         printf("Time Elapsed: %f seconds\n", elapsed);
+        printf("::::::::::::::::::::::::::\n");
     }
 
     //Write to a file
@@ -512,8 +520,6 @@ int main(int argc, char **argv)
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_File_close(&fp);
     MPI_Finalize();
-    
-
 
     free(fmatrix);
     free(kmatrix);
