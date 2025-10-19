@@ -427,7 +427,7 @@ int main(int argc, char **argv)
     free(kmatrix);
     getmatrix(&featuremap, &width, &height, &fmatrix);
     getmatrix(&kernal, &kwidth, &kheight, &kmatrix);
-    printf("file read!\n");
+    printf("process %i out of %i, file read!\n", rank, size);
     //float output[height * width];
     
     //calculate padding for same size
