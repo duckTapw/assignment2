@@ -3,6 +3,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <string.h>
 #include <math.h>
 
 #include <mpi.h>
@@ -440,14 +441,17 @@ int main(int argc, char **argv)
     printf("kernal - H: %i, W: %i\n", kheight, kwidth);
     printf("featuremap - H: %i, W: %i\n", height, width);
     printf("overrall height: %i, overrall width: %i\n", oH, oW);
+
+    int roffset = rank*(height/size);
     //set output array size
-    float retval[oH/size * oW];
+    float *retval = malloc(oH/size * oW * sizeof(float));
+    memcpy(retval, fmatrix + roffset * sizeof(float), oH/size * oW * sizeof(float));
     printf("retval set: %i\n", height/size * oW);
     printf("With: %i / %i * %i\n", height, size, oW );
     float sum = 0;
     //Need to center on the middle of the rows given
     printf("starting loops\n");
-    for (int j = 0 + rank*(height/size); j < height - (size - 1 - rank)*(height/size); j = j + swidth)
+    for (int j = 0 + roffset; j < height - (size - 1 - rank)*(height/size); j = j + swidth)
     {
         //printf("j: %i {", j);
         for (int i = 0; i < width; i = i + swidth)  //start from the middle of the row if
@@ -474,7 +478,7 @@ int main(int argc, char **argv)
                 }
             }
             
-            retval[width * (j - rank*(height/size)) + i] = sum;
+            retval[width * (j - roffset) + i] = sum;
             //printf("%i", i);
             //printf("setting [%i][%i] as %f\n", j, i, sum);   
             sum = 0; 
