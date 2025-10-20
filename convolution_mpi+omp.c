@@ -6,6 +6,8 @@
 #include <string.h>
 #include <math.h>
 
+
+#include <omp.h>
 #include <mpi.h>
 
 
@@ -82,6 +84,7 @@ void randMatrix(int h, int w, float **matrix)
     float *m = malloc(h * sizeof(float) * w);
     printf("Starting Randomisation: H=%i, W=%i\n", h, w);
     float a = 10.0;
+    #pragma omp parallel for collapse(2) firstprivate(a)
     for (int i = 0; i < h; i++)
     {
         for (int j = 0; j < w; j++)
@@ -313,107 +316,7 @@ int main(int argc, char **argv)
         storeMatrix("fmap.txt", height, width, &fmatrix);
         storeMatrix("kmap.txt", kheight, kwidth, &kmatrix);
     }
-    // int pH = (kheight - 1)/2;
-    // int pW = (kwidth - 1)/2;
-    // // //calculate padding for same size
-    // // int pH = (kH - 1)/2;
-    // // int pW = (kW - 1)/2;
-    // // //calculate output size
-    // // int oH = (H - kH + pH + sH)/sH;
-    // // int oW = (W - kW + pW + sW)/sW;
-    // // //set output array size
-    // // float *retval = malloc(oH * oW * sizeof(float));
-    // int rank, size, position = 0;
-
-    // char buffer[kheight*width];
-
-    // MPI_Init(&argc, &argv);
-    // MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    // MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-    // if (rank = 0)
-    // {
-    //     // Root process
-    //     // here we'll look to divide up and send out the work
-    //     // before piecing it back together.
-    //     // We'll also start the timer here.
-    //     printf(":::Starting Root Matrix Splitting:::\n");
-    //     struct timespec start, end;
-
-    //     clock_gettime(CLOCK_MONOTONIC, &start);
-
-    //     // We're going to take the size of the array
-    //     // Decide how many times we can section
-    //     // take sections and send them to processes
-    //     // we're going to have 4 processes aim to send off 3 at a time for processsing
-
-    //     //around at 1000x1000 the matrix is essentially computed faster by a sequential technique
-    //     FILE *fp;
-    //     fp = fopen(*file, "r");
-    //     if (fp =! NULL)
-    //     {   
-            
-    //         int h = 0;
-    //         int w = 0;
-    //         int count = 0;
-    //         //Get the width and height from the first two values
-
-    //         if(fscanf(fp, "%d %d", &h, &w) != 2)
-    //             printf("incorrect file!");
-
-    //         if(DEBUG)
-    //             printf("%dx%d\n", h, w);
-            
-    //         if (h < 1 || w < 1)
-    //             printf("bad file!");
-
-    //         float m[h * w];
-
-    //         for(int j = 0; j < h; j++)
-    //         {
-    //             // index by j + + count*kheight
-    //             for(int i = 0; i < w; i++)
-    //             {
-    //                 if(fscanf(fp, "%f", m[w * j + i]) != 1)
-    //                 {
-    //                     printf("failed grab");
-    //                 }
-    //             }
-    //             if (j == kheight)
-    //             {
-    //                 //once we hit a new multiple of height
-    //                 //pack and send the portion of the array to the calculating function
-    //                 MPI_Pack(m, kheight*width, MPI_)
-    //                 count++;
-    //             }
-
-    //         }
-    //     }
-    //     fclose(fp);
-
-
-    //     //Check these describe a real array
-
-        
-        
-    //     //the 
-        
-
-    //     clock_gettime(CLOCK_MONOTONIC, &end);
-    //     double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) /1e9;
-        
-    //     *output = retval;
-    //     printf("::::::::::::::::::::::::::\n");
-    //     printf(":::Convolution Finished:::\n");
-    //     printf("Time Elapsed: %f seconds\n", elapsed);
-    // }
-    // if (rank > 1)
-    // {
-    //     //
-    //     MPI_Recv(buffer, )
-    // }
-
-
+   
     // all 4 processes start convoluting the array, they're offset by their rank (divide the array in 4)
     // once they're all done they will reduce to produce the final output array
     MPI_Barrier(MPI_COMM_WORLD);
@@ -451,12 +354,17 @@ int main(int argc, char **argv)
     float sum = 0;
     //Need to center on the middle of the rows given
     printf("starting loops\n");
+
+    omp_set_num_threads(4);
+
+    #pragma omp parallel for collapse(2) schedule(dynamic)
     for (int j = 0 + roffset; j < height - (size - 1 - rank)*(height/size); j = j + swidth)
     {
         //printf("j: %i {", j);
         for (int i = 0; i < width; i = i + swidth)  //start from the middle of the row if
         {                                               //if its even then it's a top corner or middle corner
             //printf("i: %i\n", i);
+            #pragma omp parallel for collapse(2) reduction(+:sum) 
             for (int jj = 0; jj < kheight; jj++) 
             {
                 for (int ii = 0; ii < kwidth; ii++)
